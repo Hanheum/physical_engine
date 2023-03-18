@@ -45,10 +45,22 @@ class ParticleCrashSimulator:
         Bseq = [posB]
 
         for step in range(1, steps1 + 1):
-            new_posA = posA + (VA * self.dt * step - 0.5 * fricA * (self.dt * step) ** 2)
-            new_posB = posB + (VB * self.dt * step - 0.5 * fricB * (self.dt * step) ** 2)
-            Aseq.append(new_posA)
-            Bseq.append(new_posB)
+            xfricA = np.round(normalize(fricA)[0], 5)
+            xA = np.round(normalize(VA-fricA*self.dt*step)[0], 5)
+            xfricB = np.round(normalize(fricB)[0], 5)
+            xB = np.round(normalize(VB-fricB*self.dt*step)[0], 5)
+
+            if xfricA == xA:
+                new_posA = posA + (VA * self.dt * step - 0.5 * fricA * (self.dt * step) ** 2)
+                Aseq.append(new_posA)
+            else:
+                Aseq.append(Aseq[-1])
+
+            if xfricB == xB:
+                new_posB = posB + (VB * self.dt * step - 0.5 * fricB * (self.dt * step) ** 2)
+                Bseq.append(new_posB)
+            else:
+                Bseq.append(Bseq[-1])
 
         VA_friced = VA - fricA * t
         VB_friced = VB - fricB * t
@@ -73,6 +85,7 @@ class ParticleCrashSimulator:
                 Aseq.append(new_posA)
             else:
                 Aseq.append(Aseq[-1])
+
             if xfricB == xB:
                 new_posB = Bseq[int(steps1)] + (colli_VB * self.dt * step - 0.5 * colli_fricB * (self.dt * step) ** 2)
                 Bseq.append(new_posB)
