@@ -1,29 +1,93 @@
 import numpy as np
 from physic_engine import ParticleCrashSimulator
-import matplotlib.pyplot as plt
+import pandas as pd
+import random
+from os.path import isfile
 
-phys_en = ParticleCrashSimulator(dt=0.05, e=0.1)
+phys_en = ParticleCrashSimulator(dt=0.1, e=0.1)
 
-def particle_crash_simulation(posA, posB, collide_position, mA, mB, step1, step2):
+def particle_crash_simulation(posA, posB, collide_position, mA, mB, step1, step2, resolution=1):
     Aseq, Bseq = phys_en(posA=posA, posB=posB, collision_pos=collide_position, mA=mA, mB=mB, steps1=step1, steps2=step2)
-    plt.plot(*Aseq.T, 'ro')
-    plt.plot(*Bseq.T, 'bo')
-    combined = np.concatenate((Aseq.T, Bseq.T), axis=0)
-    mA_arr = np.ones((1, Aseq.shape[0])) * mA
-    mB_arr = np.ones((1, Aseq.shape[0])) * mB
-    combined = np.concatenate((combined, mA_arr), axis=0)
-    combined = np.concatenate((combined, mB_arr), axis=0)
-    combined = combined.T
-    return combined
+    if np.sum(Bseq) != 0:
+        combined = np.concatenate((Aseq.T, Bseq.T), axis=0)
+        mA_arr = np.ones((1, Aseq.shape[0])) * mA
+        mB_arr = np.ones((1, Aseq.shape[0])) * mB
+        combined = np.concatenate((combined, mA_arr), axis=0)
+        combined = np.concatenate((combined, mB_arr), axis=0)
+        combined = combined.T
+        combined = np.round(combined, resolution)
+        return combined
+    else:
+        return 0
 
-posA = np.array([1, 1])
-posB = np.array([5, 8])
-collision_pos = np.array([3, -3])
-mA = 3
-mB = 2
-step1 = 20
-step2 = 20
+def generate_random_particle(resolution=1):
+    x = random.uniform(-10, 10)
+    y = random.uniform(-10, 10)
+    return np.round(np.array((x, y)), resolution)
 
-dataset = particle_crash_simulation(posA, posB, collision_pos, mA, mB, step1, step2)
-print(np.round(dataset, 3))
-plt.show()
+def generate_random_particle_dis(A, r, resolution=1):
+    which = [0, 1]
+    which = random.choice(which)
+    a, b = A
+    Bx = random.uniform(a-r, a+r)
+
+    if which:
+        y = b + (r**2 - (Bx-a)**2)**0.5
+    else:
+        y = b - (r**2 - (Bx-a)**2)**0.5
+
+    return np.round(np.array((Bx, y)), resolution)
+
+def generate_radiuses():
+    rB = random.uniform(30, 60)
+    rC = random.uniform(rB/2, rB/2 + 1)
+    return rB, rC
+
+def generate_masses():
+    mA = random.uniform(2, 3)
+    mB = random.uniform(2, 3)
+    return mA, mB
+
+def generate_steps():
+    step1 = random.randint(20, 30)
+    step2 = random.randint(20, 30)
+    return step1, step2
+
+def generate_data(event_num):
+    rB, rC = generate_radiuses()
+    A = generate_random_particle()
+    B = generate_random_particle_dis(A, rB)
+    collision = generate_random_particle_dis(A, rC)
+    mA, mB = generate_masses()
+    step1, step2 = generate_steps()
+
+    data = particle_crash_simulation(A, B, collision, mA, mB, step1, step2)
+    try:
+        if data == 0:
+            return 0
+    except:
+        pass
+    event_arr = np.ones((1, data.shape[0]))*event_num
+    data = np.concatenate((event_arr, data.T), axis=0).T
+    data = pd.DataFrame(data, columns=['event_num', 'Ax', 'Ay', 'Bx', 'By', 'mA', 'mB'])
+
+    return data
+
+saving_dir = 'C:\\Users\\HLK\\Desktop\\data.csv'
+start_num = int(input('event num:'))
+target_num = int(input('target num:'))
+while start_num != target_num:
+    new_df = generate_data(start_num)
+    try:
+        if new_df == 0:
+            continue
+    except:
+        pass
+    if isfile(saving_dir):
+        df = pd.read_csv(saving_dir)
+        df = pd.concat([df, new_df])
+        df.to_csv(saving_dir, index=False)
+    else:
+        new_df.to_csv(saving_dir, index=False)
+    start_num += 1
+    print(start_num)
